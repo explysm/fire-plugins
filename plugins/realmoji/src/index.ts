@@ -48,19 +48,21 @@ patches.push(after("generate", RowManager.prototype, ([data], row) => {
 
     const match = el.target.match(emojiRegex);
     if (!match) continue;
-    const url = `${match[0]}?size=128`;
-
-    const emoji = getCustomEmojiById(match[1]);
+    const id = match[1];
+    const emoji = getCustomEmojiById(id);
+    const animated = emoji?.animated ?? match[0].includes(".gif");
+    const url = `https://cdn.discordapp.com/emojis/${id}.${animated ? "gif" : "webp"}?size=128`;
 
     content[i] = {
       type: "customEmoji",
-      id: match[1],
+      id,
       alt: emoji?.name ?? "<realmoji>",
       src: url,
       frozenSrc: url.replace("gif", "webp"),
+      animated,
       jumboable: jumbo ? true : undefined,
     };
   }
-}));
+});
 
 export const onUnload = () => patches.forEach((unpatch) => unpatch());
