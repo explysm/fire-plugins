@@ -1,0 +1,14 @@
+{
+  "name": "RealmojiExtended",
+  "description": "Makes freemojis real. Now extended to support later versions.",
+  "authors": [
+    {
+      "name": "explysm",
+      "id": "752899252866515025"
+    }
+  ],
+  "main": "src/index.ts",
+  "vendetta": {
+    "icon": "ic_emoji_24px"
+  }
+}
