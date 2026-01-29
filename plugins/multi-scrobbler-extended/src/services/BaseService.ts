@@ -1,4 +1,4 @@
-import { ServiceClient, Track } from "../../../defs";
+import { ServiceClient, Track } from "../defs";
 import Constants from "../constants";
 import { incrementApiCall, recordServiceError } from "../utils/debug";
 

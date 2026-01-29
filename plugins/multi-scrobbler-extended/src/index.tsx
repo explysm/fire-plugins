@@ -1,7 +1,7 @@
 import { plugin } from "@vendetta";
 import { FluxDispatcher } from "@vendetta/metro/common";
 
-import { LFMSettings } from "../../defs";
+import { LFMSettings } from "./defs";
 import Constants from "./constants";
 import { initialize, stop, switchService } from "./manager";
 import { UserStore } from "./modules";
@@ -306,14 +306,14 @@ async function validateAndInitialize() {
 
   log(`Starting with ${serviceName}...`);
 
-  if (UserStore.getCurrentUser()) {
+  if (UserStore?.getCurrentUser()) {
     log("Discord is already connected, initializing immediately...");
     await tryInitialize();
   } else {
     log("Waiting for Discord connection...");
     const waitForUser = () => {
       try {
-        if (UserStore.getCurrentUser()) {
+        if (UserStore?.getCurrentUser()) {
           log("Discord connection established");
           tryInitialize();
           FluxDispatcher.unsubscribe("CONNECTION_OPEN", waitForUser);

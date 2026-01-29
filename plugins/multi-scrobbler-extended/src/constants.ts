@@ -1,4 +1,4 @@
-import { ServiceConfig, ServiceType } from "../../defs";
+import { ServiceConfig, ServiceType } from "./defs";
 
 const Constants = {
   DEFAULT_APP_NAME: "Music",

@@ -1,7 +1,7 @@
 import { FluxDispatcher } from "@vendetta/metro/common";
 
 import { pluginState } from "..";
-import { Activity } from "../../../defs";
+import { Activity } from "../defs";
 import Constants from "../constants";
 import { stop } from "../manager";
 import { AssetManager } from "../modules";
@@ -64,6 +64,10 @@ export async function fetchAsset(
     }
 
     try {
+        if (!AssetManager) {
+            logVerbose("AssetManager not found, skipping fetch");
+            return [];
+        }
         logVerbose(`Fetching ${asset.length} asset(s):`, asset);
         const result = await AssetManager.fetchAssetIds(appId, asset);
         logVerbose(`Successfully fetched ${result.length} asset(s)`);

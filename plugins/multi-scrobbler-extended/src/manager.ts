@@ -1,5 +1,5 @@
 import { currentSettings, pluginState } from ".";
-import { Activity } from "../../defs";
+import { Activity } from "./defs";
 import Constants from "./constants";
 import { SelfPresenceStore } from "./modules";
 import { clearActivity, fetchAsset, sendRequest } from "./utils/activity";
@@ -72,7 +72,7 @@ class PluginManager {
 
     try {
       // Check if any ignored app is active
-      if (currentSettings.ignoreList && currentSettings.ignoreList.length > 0) {
+      if (SelfPresenceStore && currentSettings.ignoreList && currentSettings.ignoreList.length > 0) {
         const ignoredActivity = SelfPresenceStore.findActivity((act) => {
           if (!act.name) return false;
           return currentSettings.ignoreList.some((ignoredApp: string) =>

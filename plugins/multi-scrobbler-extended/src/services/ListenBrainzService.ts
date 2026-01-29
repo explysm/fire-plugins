@@ -1,4 +1,4 @@
-import { Track } from "../../../defs";
+import { Track } from "../defs";
 import { currentSettings } from "..";
 import Constants from "../constants";
 import { BaseService } from "./BaseService";

@@ -49,10 +49,16 @@ function Section({ tabs }) {
 
 function patchPanelUI(tabs, patches) {
   try {
+    const target = bunny?.metro?.findByPropsLazy(["renderTitle", "sections"], false);
+    if (!target) {
+      console.warn("[Multi Scrobbler] patchPanelUI: Target module not found");
+      return;
+    }
+
     patches.push(
       after(
         "default",
-        bunny?.metro?.findByPropsLazy(["renderTitle", "sections"], false),
+        target,
         (_, ret) => {
           const UserSettingsOverview = findInReactTree(
             ret.props.children,

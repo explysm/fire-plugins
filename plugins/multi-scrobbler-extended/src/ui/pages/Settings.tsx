@@ -22,7 +22,7 @@ import RPCCustomizationSettingsPage from "./pages/RPCCustomizationSettingsPage";
 import IgnoreListSettingsPage from "./pages/IgnoreListSettingsPage";
 import LoggingSettingsPage from "./pages/LoggingSettingsPage";
 
-import { ServiceType } from "../../../../defs";
+import { ServiceType } from "../../defs";
 
 // Storage defaults
 plugin.storage.username ??= "";

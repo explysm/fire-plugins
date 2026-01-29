@@ -1,4 +1,4 @@
-import { ServiceClient, ServiceType } from "../../../defs";
+import { ServiceClient, ServiceType } from "../defs";
 import { currentSettings } from "..";
 import { LastFmService } from "./LastFmService";
 import { LibreFmService } from "./LibreFmService";

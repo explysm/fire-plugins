@@ -1,5 +1,5 @@
 import { useReducer } from "react";
-import { Activity, Track, ServiceType } from "../../../defs";
+import { Activity, Track, ServiceType } from "../defs";
 
 let __forceUpdate: () => void;
 
