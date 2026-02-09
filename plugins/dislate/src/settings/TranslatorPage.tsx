@@ -30,5 +30,32 @@ export default () => {
                     showToast(`Saved Translator to Google Translate`, getAssetIDByName("check"))
                 }}
             />
+            <FormRow
+                label="OpenRouter"
+                trailing={() => <FormRow.Arrow />}
+                onPress={() => {
+                    if (settings.translator == 2) return
+                    settings.translator = 2
+                    showToast(`Saved Translator to OpenRouter`, getAssetIDByName("check"))
+                }}
+            />
+            <FormRow
+                label="Google AI"
+                trailing={() => <FormRow.Arrow />}
+                onPress={() => {
+                    if (settings.translator == 3) return
+                    settings.translator = 3
+                    showToast(`Saved Translator to Google AI`, getAssetIDByName("check"))
+                }}
+            />
+            <FormRow
+                label="ChatGPT"
+                trailing={() => <FormRow.Arrow />}
+                onPress={() => {
+                    if (settings.translator == 4) return
+                    settings.translator = 4
+                    showToast(`Saved Translator to ChatGPT`, getAssetIDByName("check"))
+                }}
+            />
     </ScrollView>)
 }

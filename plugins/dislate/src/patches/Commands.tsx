@@ -9,7 +9,7 @@ import { findByProps } from "@vendetta/metro"
 import { settings } from ".."
 
 import { DeepLLangs} from "../lang"
-import { DeepL, GTranslate } from "../api"
+import { translate } from "../api"
 
 const ClydeUtils = findByProps("sendBotMessage")
 const langOptionsDeepL = Object.entries(DeepLLangs).map(([key, value]) => ({
@@ -57,15 +57,7 @@ export default () => registerCommand({
     async execute(args, ctx) {
         const [text, lang] = args
         try {
-            var content
-            switch(settings.translator) {
-                case 0:
-                    content = await DeepL.translate(text.value, undefined, lang.value)
-                    break
-                case 1:
-                    content = await GTranslate.translate(text.value, undefined, lang.value)
-                    break
-            }
+            var content = await translate(text.value, undefined, lang.value)
             return await new Promise((resolve): void => showConfirmationAlert({
                 title: "Are you sure you want to send it?",
                 content: (

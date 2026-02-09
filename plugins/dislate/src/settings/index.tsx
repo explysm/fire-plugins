@@ -8,6 +8,9 @@ import { useProxy } from "@vendetta/storage"
 import { settings } from ".."
 import TargetLang from "./TargetLang"
 import TranslatorPage from "./TranslatorPage"
+import OpenRouterSettings from "./OpenRouterSettings"
+import GoogleAISettings from "./GoogleAISettings"
+import ChatGPTSettings from "./ChatGPTSettings"
 
 const { ScrollView, Text } = ReactNative
 const { FormRow, FormSwitchRow } = Forms
@@ -23,6 +26,17 @@ const styles = stylesheet.createThemedStyleSheet({
         fontSize: 14
     }
 })
+
+const getTranslatorName = (translatorId: number) => {
+    switch (translatorId) {
+        case 0: return "DeepL";
+        case 1: return "Google Translate";
+        case 2: return "OpenRouter";
+        case 3: return "Google AI";
+        case 4: return "ChatGPT";
+        default: return "Unknown";
+    }
+}
 
 export default () => {
     const navigation = NavigationNative.useNavigation()
@@ -52,7 +66,7 @@ export default () => {
             />
             <FormRow
                 label={"Translator"}
-                subLabel={settings.translator ? "Google Translate" : "DeepL"}
+                subLabel={getTranslatorName(settings.translator)}
                 leading={<FormRow.Icon source={getAssetIDByName("ic_locale_24px")} />}
                 trailing={() => <FormRow.Arrow />}
                 onPress={() => navigation.push("VendettaCustomPage", {
@@ -60,6 +74,30 @@ export default () => {
                     render: TranslatorPage,
                 })}
             />
+
+            {(settings.translator === 2 || settings.translator === 3 || settings.translator === 4) && (
+                <>
+                    <FormRow
+                        label="AI Translator Settings"
+                        subLabel="Configure API keys and models"
+                        leading={<FormRow.Icon source={getAssetIDByName("ic_cog_24px")} />}
+                        trailing={() => <FormRow.Arrow />}
+                        onPress={() => {
+                            let renderComponent;
+                            switch (settings.translator) {
+                                case 2: renderComponent = OpenRouterSettings; break;
+                                case 3: renderComponent = GoogleAISettings; break;
+                                case 4: renderComponent = ChatGPTSettings; break;
+                                default: return;
+                            }
+                            navigation.push("VendettaCustomPage", {
+                                title: `${getTranslatorName(settings.translator)} Settings`,
+                                render: renderComponent,
+                            })
+                        }}
+                    />
+                </>
+            )}
 
             <Text style={styles.subheaderText} onPress={() => url.openURL("https://github.com/Rico040/bunny-plugins")}>
                 {`Build: (${manifest.hash.substring(0, 7)})`}

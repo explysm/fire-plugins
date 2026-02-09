@@ -7,7 +7,7 @@ import { Forms } from "@vendetta/ui/components"
 import { findInReactTree } from "@vendetta/utils"
 import { settings } from ".."
 
-import { DeepL, GTranslate } from "../api"
+import { translate } from "../api"
 import { showToast } from "@vendetta/ui/toasts"
 import { logger } from "@vendetta"
 
@@ -68,16 +68,7 @@ export default () => before("openLazy", LazyActionSheet, ([component, key, msg])
                         return ` [[${placeholders.length - 1}]] `
                     })
                     var translate
-                    switch(settings.translator) {
-                        case 0:
-                            console.log("Translating with DeepL: ", textToTranslate)
-                            translate = await DeepL.translate(textToTranslate, undefined, target_lang, !isTranslated)
-                            break
-                        case 1:
-                            console.log("Translating with GTranslate: ", textToTranslate)
-                            translate = await GTranslate.translate(textToTranslate, undefined, target_lang, !isTranslated)
-                            break
-                    }
+                    translate = await translate(textToTranslate, undefined, target_lang, !isTranslated)
                     
                     let translatedText = translate.text
                     placeholders.forEach((original, index) => {
