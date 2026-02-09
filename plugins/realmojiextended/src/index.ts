@@ -50,7 +50,7 @@ patches.push(after("generate", RowManager.prototype, ([data], row) => {
     if (!match) continue;
     const id = match[1];
     const emoji = getCustomEmojiById(id);
-    const animated = emoji?.animated ?? match[0].includes(".gif") || match[0].includes(".webm");
+    const animated = emoji?.animated ?? (match[0].includes(".gif") || match[0].includes(".webm"));
     const fileExtension = animated ? (match[0].includes(".webm") ? "webm" : "gif") : "webp";
     const url = `https://cdn.discordapp.com/emojis/${id}.${fileExtension}?size=128`;
 
