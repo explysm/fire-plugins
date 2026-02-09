@@ -16,9 +16,9 @@ export const settings: {
     chatGPTModel?: string
 } = storage
 
-settings.target_lang ??= "en"
-settings.translator ??= 1
-settings.immersive_enabled ??= true
+settings.target_lang = settings.target_lang ?? "en"
+settings.translator = settings.translator ?? 1
+settings.immersive_enabled = settings.immersive_enabled ?? true
 
 let patches = []
 
