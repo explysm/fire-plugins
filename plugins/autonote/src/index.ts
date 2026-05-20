@@ -431,9 +431,8 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
           }
       };
 
-      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
       const scriptBody = transpileScript(note.script);
-      const scriptFn = new AsyncFunction("content", "note", "utils", "storage", scriptBody);
+      const scriptFn = new Function("content", "note", "utils", "storage", scriptBody);
       const scriptReturn = scriptFn(currentContent, note, utils, data);
 
       return Promise.resolve(scriptReturn).then(result => {
