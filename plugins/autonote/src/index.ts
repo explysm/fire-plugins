@@ -630,11 +630,49 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
             if (HTTP?.post) return HTTP.post({ url, body, headers: { "Content-Type": "application/json" } });
             return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
         },
-        runAfter: (cb: (id: string) => void) => afterCallbacks?.push(cb)
+        runAfter: (cb: (id: string) => void) => afterCallbacks?.push(cb),
+        rpc_set: (activity: any) => {
+            const act = {
+                application_id: activity.application_id || "1054951789318909972",
+                name: activity.activity || activity.name || "Reveg©",
+                details: activity.details,
+                state: activity.state,
+                type: activity.type ?? 0,
+                ...activity
+            };
+            
+            // Handle URL-based assets
+            if (act.assets) {
+                if (typeof act.assets.large_image === 'string' && act.assets.large_image.startsWith('http')) {
+                    act.assets.large_image = "mp:" + act.assets.large_image;
+                }
+                if (typeof act.assets.small_image === 'string' && act.assets.small_image.startsWith('http')) {
+                    act.assets.small_image = "mp:" + act.assets.small_image;
+                }
+            }
+
+            window.autonote_rpc_state = act;
+
+            FluxDispatcher.dispatch({
+                type: "LOCAL_ACTIVITY_UPDATE",
+                activity: act,
+                pid: 1608,
+                socketId: "RPC@Reveg",
+            });
+        },
+        rpc_remove: () => {
+            delete window.autonote_rpc_state;
+            FluxDispatcher.dispatch({
+                type: "LOCAL_ACTIVITY_UPDATE",
+                activity: null,
+                pid: 1608,
+                socketId: "RPC@Reveg",
+            });
+        }
     };
 }
 
-const patches = [];
+var patches = (window.autonote_patches = window.autonote_patches || []);
 
 patches.push(instead("sendMessage", MessageActions, (args, orig) => {
     const channelId = args[0];
@@ -673,11 +711,27 @@ const onMessageCreate = (data: any) => {
     addAutoNote(message.content, notesSnapshot, utils, channelId, message);
 };
 
-FluxDispatcher?.subscribe?.("MESSAGE_CREATE", onMessageCreate);
+if (!window.autonote_unsub) {
+    FluxDispatcher?.subscribe?.("MESSAGE_CREATE", onMessageCreate);
+    window.autonote_unsub = () => FluxDispatcher?.unsubscribe?.("MESSAGE_CREATE", onMessageCreate);
+}
+
+// Persist RPC state on init
+if (window.autonote_rpc_state) {
+    FluxDispatcher.dispatch({
+        type: "LOCAL_ACTIVITY_UPDATE",
+        activity: window.autonote_rpc_state,
+        pid: 1608,
+        socketId: "RPC@Reveg",
+    });
+}
 
 export const onUnload = () => {
     patches.forEach(p => p());
-    FluxDispatcher?.unsubscribe?.("MESSAGE_CREATE", onMessageCreate);
+    if (window.autonote_unsub) {
+        window.autonote_unsub();
+        delete window.autonote_unsub;
+    }
 };
 
 export const settings = () => {
