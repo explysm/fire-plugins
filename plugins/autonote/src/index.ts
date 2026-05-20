@@ -638,7 +638,10 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
                 details: activity.details,
                 state: activity.state,
                 type: activity.type ?? 0,
-                ...activity
+                ...activity,
+                assets: {
+                    ...activity.assets
+                }
             };
             
             // Handle URL-based assets
