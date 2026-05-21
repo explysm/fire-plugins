@@ -3,14 +3,17 @@
 These utilities allow you to perform more complex actions such as networking, logging, and data persistence.
 
 ### `utils.fetch(url, options)`
-Standard fetch API to make HTTP requests.
-- Returns a Promise.
-- `options`: Standard fetch options (`method`, `headers`, `body`).
+Standard fetch API to make HTTP requests. 
+- Returns a **Promise**.
+- Note: Do NOT use `async/await`. Use `.then()`.
 
 ```javascript
-return utils.fetch("https://api.quotable.io/random")
+utils.fetch("https://api.quotable.io/random")
     .then(r => r.json())
-    .then(data => content + "\n\n> " + data.content + " — " + data.author);
+    .then(data => {
+        utils.send(content + "\n\n> " + data.content + " — " + data.author);
+    });
+return null; // Cancel original message
 ```
 
 ### `utils.webhook(url, payload)`
@@ -42,9 +45,12 @@ utils.log("Current channel is: " + utils.channel);
 ```
 
 ### `utils.sleep(ms)`
-Async function to pause execution for a specific duration. Must be used with `await`.
+Pause execution for a specific duration.
+- Returns a **Promise**.
+- Note: Do NOT use `async/await`. Use `.then()`.
 
 ```javascript
-await utils.sleep(2000); // Wait for 2 seconds
-utils.send("Delayed message!");
+utils.sleep(2000).then(() => {
+    utils.send("Delayed message!");
+});
 ```

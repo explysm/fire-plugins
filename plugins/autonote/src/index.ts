@@ -83,9 +83,12 @@ return content;`,
   "Chaos Mode": `// Randomly swaps letters
 return content.split("").map(c => Math.random() > 0.8 ? c.toUpperCase() : c.toLowerCase()).join("");`,
   "API Example": `// Fetch data from an API
-const res = await utils.fetch("https://api.quotable.io/random");
-const data = await res.json();
-return content + "\n\n> " + data.content + " — " + data.author;`,
+utils.fetch("https://api.quotable.io/random")
+    .then(r => r.json())
+    .then(data => {
+        utils.send(content + "\n\n> " + data.content + " — " + data.author);
+    });
+return null; // Cancel original message`,
   "Webhook: Logger": `// Logs every message you send to a webhook
 utils.webhook("WEBHOOK_URL", {
     name: utils.user.username + " Logger",
@@ -115,32 +118,31 @@ if (storage.total % 5 === 0) {
 }
 return content;`,
   "Profanity Counter": `// Checks for profanity and keeps a total count
-const res = await utils.fetch("https://vector.profanity.dev", {
+utils.fetch("https://vector.profanity.dev", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: content })
+}).then(res => res.json()).then(data => {
+    if (data.isProfane) {
+        utils.storage.badWords = (utils.storage.badWords || 0) + 1;
+        utils.toast("Profanity detected! Total: " + utils.storage.badWords);
+        utils.edit(id, content + "\\n-# ⚠️ Swear count: " + utils.storage.badWords);
+    }
 });
-const data = await res.json();
-
-if (data.isProfane) {
-    utils.storage.badWords = (utils.storage.badWords || 0) + 1;
-    utils.toast("Profanity detected! Total: " + utils.storage.badWords);
-    return content + "\n-# ⚠️ Swear count: " + utils.storage.badWords;
-}
 return content;`
 };
 
 const SNIPPETS = [
     { label: "send", code: 'utils.send("");' },
-    { label: "fetch", code: 'const res = await utils.fetch("");\nconst data = await res.json();' },
+    { label: "fetch", code: 'utils.fetch("").then(r => r.json()).then(data => {\n  \n});' },
     { label: "del", code: 'utils.delete(id);' },
     { label: "copy", code: 'utils.copy(content);' },
-    { label: "wait", code: 'await utils.sleep(1000);' },
+    { label: "wait", code: 'utils.sleep(1000).then(() => {\n  \n});' },
     { label: "hook", code: 'utils.webhook("", { content: "" });' },
     { label: "log", code: 'utils.log("");' },
     { label: "react", code: 'utils.react(id, "🔥");' },
     { label: "read", code: 'const msgs = utils.read(5);' },
-    { label: "onMsg", code: 'utils.onMessage("aura", "contains", async (msg) => {\n  await utils.sleep(500);\n  utils.react(msg.id, "🔥");\n});' },
+    { label: "onMsg", code: 'utils.onMessage("aura", "contains", (msg) => {\n  utils.react(msg.id, "🔥");\n});' },
     { label: "after", code: 'utils.runAfter(id => {\n  \n});' },
     { label: "if", code: 'if (content.includes("")) {\n  \n}' },
     { label: "import", code: 'import { findByProps } from "@vendetta/metro";' }
@@ -151,16 +153,16 @@ const transpileScript = (script: string) => {
     return script
         .replace(/import\s+{([^}]+)}\s+from\s+["']([^"']+)["'];?/g, (m, imports, mod) => {
             const transformedImports = imports.replace(/\s+as\s+/g, ": ");
-            return `const { ${transformedImports} } = await utils.import("${mod}");`;
+            return `const { ${transformedImports} } = utils.import("${mod}");`;
         })
         .replace(/import\s+\*\s+as\s+(\w+)\s+from\s+["']([^"']+)["'];?/g, (m, name, mod) => {
-            return `const ${name} = await utils.import("${mod}");`;
+            return `const ${name} = utils.import("${mod}");`;
         })
         .replace(/import\s+(\w+)\s+from\s+["']([^"']+)["'];?/g, (m, name, mod) => {
-            return `const { default: ${name} } = await utils.import("${mod}");`;
+            return `const { default: ${name} } = utils.import("${mod}");`;
         })
         .replace(/import\s+["']([^"']+)["'];?/g, (m, mod) => {
-            return `await utils.import("${mod}");`;
+            return `utils.import("${mod}");`;
         });
 };
 
@@ -339,9 +341,8 @@ function processPlaceholders(text: string, triggerMatch: string, content: string
   const handleClipboard = (resText: string): Promise<string> => {
       if (resText.includes("{clipboard}")) {
           try {
-              return Promise.resolve(Clipboard?.getString?.() || "").then(clip => {
-                  return resText.replace(/{clipboard}/g, clip || "");
-              }).catch(() => resText.replace(/{clipboard}/g, ""));
+              const clip = Clipboard?.getString?.() || "";
+              return Promise.resolve(resText.replace(/{clipboard}/g, clip));
           } catch(e) { return Promise.resolve(resText.replace(/{clipboard}/g, "")); }
       }
       return Promise.resolve(resText);
@@ -432,7 +433,7 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
                   "react": React,
                   "react-native": ReactNative,
               };
-              return Promise.resolve(modules[pkg] || null);
+              return modules[pkg] || null;
           }
       };
 
@@ -495,9 +496,10 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
 
         return runScript(note, processedContent).then(scriptResult => {
             if (scriptResult === null) return null;
-            return processPlaceholders(note.footer || "", matchedText, scriptResult, channelId).then(addedText => {
+            const addedText = processPlaceholders(note.footer || "", matchedText, scriptResult, channelId);
+            return Promise.resolve(addedText).then(added => {
                 const position = note.position || "bottom";
-                const styledText = applyStyle(addedText, note.style || "none");
+                const styledText = applyStyle(added, note.style || "none");
                 if (!styledText) return scriptResult;
                 return position === "top" ? styledText + "\n" + scriptResult : scriptResult + "\n" + styledText;
             });
@@ -514,9 +516,10 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
             if (curr === null || !isScoped(note, channelId)) return curr;
             return runScript(note, curr).then(scriptResult => {
                 if (scriptResult === null) return null;
-                return processPlaceholders(note.footer || "", "", scriptResult, channelId).then(addedText => {
+                const addedText = processPlaceholders(note.footer || "", "", scriptResult, channelId);
+                return Promise.resolve(addedText).then(added => {
                     const position = note.position || "bottom";
-                    const styledText = applyStyle(addedText, note.style || "none");
+                    const styledText = applyStyle(added, note.style || "none");
                     if (!styledText) return scriptResult;
                     return position === "top" ? styledText + "\n" + scriptResult : scriptResult + "\n" + styledText;
                 });
@@ -595,8 +598,8 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
             const cid = chanId || channelId;
             const messages = MessageStore?.getMessages?.(cid);
             if (!messages) return [];
-            const arr = messages.toArray?.() || messages._ordered || (Array.isArray(messages) ? messages : Object.values(messages));
-            return (arr || []).slice(-count).map((m: any) => ({
+            const arr = messages.toArray?.() || (messages._ordered ? Object.values(messages._ordered) : null) || (Array.isArray(messages) ? messages : []);
+            return arr.slice(-count).map((m: any) => ({
                 id: m.id,
                 content: m.content,
                 author: m.author,
@@ -605,17 +608,16 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
                 channelId: m.channel_id || cid
             }));
         },
-        deleteMessages: async (count: number) => {
+        deleteMessages: (count: number) => {
             const user = UserStore?.getCurrentUser?.();
-            const messages = MessageStore?.getMessages?.(channelId);
+            const cid = channelId;
+            const messages = MessageStore?.getMessages?.(cid);
             if (!user || !messages) return;
-            const arr = messages.toArray?.() || messages._ordered || (Array.isArray(messages) ? messages : Object.values(messages));
-            if (!arr) return;
+            const arr = messages.toArray?.() || (messages._ordered ? Object.values(messages._ordered) : null) || (Array.isArray(messages) ? messages : []);
             const toDelete = arr.filter((m: any) => m.author?.id === user.id).slice(-count).reverse();
-            for (const m of toDelete) {
-                MessageActions.deleteMessage?.(channelId, m.id);
-                await new Promise(r => setTimeout(r, 200));
-            }
+            toDelete.forEach((m, i) => {
+                setTimeout(() => MessageActions.deleteMessage?.(cid, m.id), i * 200);
+            });
         },
         status: (text: string) => {
             UserSettingsActions?.updateRemoteSettings?.({
@@ -669,7 +671,7 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
                     ...activity.assets
                 }
             };
-            
+
             // Handle URL-based assets
             if (act.assets) {
                 if (typeof act.assets.large_image === 'string' && act.assets.large_image.startsWith('http')) {
@@ -906,7 +908,7 @@ export const settings = () => {
           )
       ),
       React.createElement(TableRowGroup, { title: "Documentation" },
-          React.createElement(TableRow, { label: "Scripting", subLabel: "Scripts now support 'async/await' and 'import' syntax." }),
+          React.createElement(TableRow, { label: "Scripting", subLabel: "Scripts support Promises (.then). Note: async/await keywords are UNSUPPORTED." }),
           React.createElement(TableRow, { label: "Import Syntax", subLabel: "e.g. import { findByProps } from '@vendetta/metro';" }),
           React.createElement(TableRow, { label: "Placeholders", subLabel: "{trigger}, {time}, {date}, {wordCount}, {clipboard}, {random:A,B}, {api:url}, {channel}, {channelID}, {server}, {serverID}, {user}, {mention:ID}" }),
           React.createElement(TableRow, { label: "Script Context", subLabel: "content, note, storage, utils (send, delete, deleteMessages, status, statusOnline, edit, react, read, onMessage, copy, runAfter, fetch, log, webhook, sleep, stop, content, channelType, toast, storage, import)" }),
@@ -921,7 +923,9 @@ export const settings = () => {
           React.createElement(TableRow, { label: "utils.content(text)", subLabel: "Directly sets the final message content from within a script." }),
           React.createElement(TableRow, { label: "utils.toast(msg)", subLabel: "Shows a small popup at the bottom of the screen." }),
           React.createElement(TableRow, { label: "utils.storage", subLabel: "Global storage shared across all scripts." }),
-          React.createElement(TableRow, { label: "utils.runAfter(cb)", subLabel: "Runs a callback after the message is sent. Callback receives the message 'id'. Useful for delayed actions like auto-delete." })
+          React.createElement(TableRow, { label: "utils.fetch(url, [opts])", subLabel: "Returns a Promise. Use .then()." }),
+          React.createElement(TableRow, { label: "utils.sleep(ms)", subLabel: "Returns a Promise. Use .then()." }),
+          React.createElement(TableRow, { label: "utils.runAfter(cb)", subLabel: "Runs a callback after the message is sent. Callback receives the message 'id'." })
       )
     ),
 
