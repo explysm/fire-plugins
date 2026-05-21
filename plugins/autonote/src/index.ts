@@ -14,6 +14,7 @@ const Clipboard = findByProps("setString", "getString");
 const ChannelStore = findByProps("getChannel", "getChannels");
 const GuildStore = findByProps("getGuild", "getGuilds");
 const UserStore = findByProps("getCurrentUser", "getUser");
+const UserSettingsActions = findByProps("updateRemoteSettings");
 const HTTP = findByProps("get", "post", "put");
 const { showToast } = findByProps("showToast") || {};
 
@@ -405,7 +406,11 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
           storage: storage._global,
           toast: (msg: string) => showToast?.(msg),
           content: (c: string) => { scriptContent = c; return c; },
-          onMessage: (pattern: string, mode: string, cb: Function) => {
+          onMessage: (pattern: string | Function, mode: string, cb: Function) => {
+              if (typeof pattern === "function") {
+                  if (!messageListeners.includes(pattern)) messageListeners.push(pattern);
+                  return;
+              }
               if (typeof cb !== "function") return;
               const lowContent = (currentContent || "").toLowerCase();
               const lowPattern = (pattern || "").toLowerCase();
@@ -414,7 +419,7 @@ function addAutoNote(content: string, notes: AutoNote[], baseUtils: any, channel
               if (m === "contains") matched = lowContent.includes(lowPattern);
               else if (m === "startswith") matched = lowContent.startsWith(lowPattern);
               else if (m === "match" || m === "exact" || m === "matches") matched = lowContent === lowPattern;
-              else if (m === "regex") { try { matched = new RegExp(pattern, "i").test(currentContent); } catch(e) {} }
+              else if (m === "regex") { try { matched = new RegExp(pattern as string, "i").test(currentContent); } catch(e) {} }
               
               if (matched) cb({ content: currentContent, id: message?.id, author: message?.author, channelId });
           },
@@ -586,17 +591,39 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
                 ReactionActions?.addReaction?.(channelId, msgId, reactionEmoji);
             }, 800);
         },
-        read: (count: number) => {
-            const messages = MessageStore?.getMessages?.(channelId);
+        read: (count: number, chanId?: string) => {
+            const cid = chanId || channelId;
+            const messages = MessageStore?.getMessages?.(cid);
             if (!messages) return [];
-            const arr = messages.toArray?.() || Object.values(messages._ordered || {}) || [];
-            return arr.slice(-count).map((m: any) => ({
+            const arr = messages.toArray?.() || messages._ordered || (Array.isArray(messages) ? messages : Object.values(messages));
+            return (arr || []).slice(-count).map((m: any) => ({
                 id: m.id,
                 content: m.content,
                 author: m.author,
                 timestamp: m.timestamp,
-                reactions: m.reactions
+                reactions: m.reactions,
+                channelId: m.channel_id || cid
             }));
+        },
+        deleteMessages: async (count: number) => {
+            const user = UserStore?.getCurrentUser?.();
+            const messages = MessageStore?.getMessages?.(channelId);
+            if (!user || !messages) return;
+            const arr = messages.toArray?.() || messages._ordered || (Array.isArray(messages) ? messages : Object.values(messages));
+            if (!arr) return;
+            const toDelete = arr.filter((m: any) => m.author?.id === user.id).slice(-count).reverse();
+            for (const m of toDelete) {
+                MessageActions.deleteMessage?.(channelId, m.id);
+                await new Promise(r => setTimeout(r, 200));
+            }
+        },
+        status: (text: string) => {
+            UserSettingsActions?.updateRemoteSettings?.({
+                customStatus: { text: text || null }
+            });
+        },
+        statusOnline: (status: string) => {
+            UserSettingsActions?.updateRemoteSettings?.({ status });
         },
         copy: (text: string) => Clipboard?.setString?.(text),
         fetch: (url: string, opts?: any) => {
@@ -675,6 +702,7 @@ function getUtils(channelId: string, afterCallbacks?: any[]) {
 }
 
 var patches = (window.autonote_patches = window.autonote_patches || []);
+var messageListeners = (window.autonote_listeners = window.autonote_listeners || []);
 
 patches.push(instead("sendMessage", MessageActions, (args, orig) => {
     const channelId = args[0];
@@ -704,7 +732,15 @@ patches.push(instead("sendMessage", MessageActions, (args, orig) => {
 
 const onMessageCreate = (data: any) => {
     const message = data.message || data;
-    if (!message || !message.channel_id || !message.content || message.__autoNoteProcessed) return;
+    if (!message || !message.channel_id) return;
+
+    // Call global listeners
+    messageListeners.forEach(cb => {
+        try { cb({ content: message.content, id: message.id, author: message.author, channelId: message.channel_id }); }
+        catch(e) { console.error("[AutoNote] Error in message listener:", e); }
+    });
+
+    if (!message.content || message.__autoNoteProcessed) return;
 
     const channelId = message.channel_id;
     const utils = getUtils(channelId);
@@ -734,6 +770,7 @@ export const onUnload = () => {
         window.autonote_unsub();
         delete window.autonote_unsub;
     }
+    if (window.autonote_listeners) window.autonote_listeners.length = 0;
 };
 
 export const settings = () => {
@@ -872,10 +909,14 @@ export const settings = () => {
           React.createElement(TableRow, { label: "Scripting", subLabel: "Scripts now support 'async/await' and 'import' syntax." }),
           React.createElement(TableRow, { label: "Import Syntax", subLabel: "e.g. import { findByProps } from '@vendetta/metro';" }),
           React.createElement(TableRow, { label: "Placeholders", subLabel: "{trigger}, {time}, {date}, {wordCount}, {clipboard}, {random:A,B}, {api:url}, {channel}, {channelID}, {server}, {serverID}, {user}, {mention:ID}" }),
-          React.createElement(TableRow, { label: "Script Context", subLabel: "content, note, storage, utils (send, delete, edit, react, read, onMessage, copy, runAfter, fetch, log, webhook, sleep, stop, content, channelType, toast, storage, import)" }),
+          React.createElement(TableRow, { label: "Script Context", subLabel: "content, note, storage, utils (send, delete, deleteMessages, status, statusOnline, edit, react, read, onMessage, copy, runAfter, fetch, log, webhook, sleep, stop, content, channelType, toast, storage, import)" }),
           React.createElement(TableRow, { label: "utils.react(id, emoji)", subLabel: "Reacts to a message. Emoji can be '🔥' or 'name:id'." }),
-          React.createElement(TableRow, { label: "utils.read(count)", subLabel: "Returns an array of the last 'count' messages in the channel." }),
-          React.createElement(TableRow, { label: "utils.onMessage(query, mode, cb)", subLabel: "Runs callback if message matches. Modes: contains, startswith, matches, regex." }),
+          React.createElement(TableRow, { label: "utils.read(count, [chanId])", subLabel: "Returns an array of the last 'count' messages in the channel." }),
+          React.createElement(TableRow, { label: "utils.deleteMessages(count)", subLabel: "Deletes the last 'count' messages from the current user in the channel." }),
+          React.createElement(TableRow, { label: "utils.status(text)", subLabel: "Sets a custom status message (text only)." }),
+          React.createElement(TableRow, { label: "utils.statusOnline(presence)", subLabel: "Sets online presence (online, idle, dnd, invisible)." }),
+          React.createElement(TableRow, { label: "utils.onMessage(cb)", subLabel: "Registers a global message listener callback. Callback receives {content, id, author, channelId}." }),
+          React.createElement(TableRow, { label: "utils.onMessage(query, mode, cb)", subLabel: "Immediate check against current message. Modes: contains, startswith, matches, regex." }),
           React.createElement(TableRow, { label: "utils.channelType", subLabel: "0 for DMs/Groups, 1 for Guilds." }),
           React.createElement(TableRow, { label: "utils.content(text)", subLabel: "Directly sets the final message content from within a script." }),
           React.createElement(TableRow, { label: "utils.toast(msg)", subLabel: "Shows a small popup at the bottom of the screen." }),

@@ -2,13 +2,24 @@
 
 AutoNote allows you to trigger actions based on both outgoing and incoming messages.
 
+### `utils.onMessage(callback)`
+Registers a global listener that triggers for **every** incoming message in any channel.
+- `callback`: A function `(message) => {}` that runs for every message.
+
+This is useful for complex logic that doesn't fit into a simple pattern match.
+
+```javascript
+// Logs every message you see to the script logs
+utils.onMessage((msg) => {
+    utils.log(`[${msg.channelId}] ${msg.author.username}: ${msg.content}`);
+});
+```
+
 ### `utils.onMessage(query, mode, callback)`
-Registers a global listener for the current script's execution context.
+Registers a listener that triggers only when an incoming message matches the query.
 - `query`: The text to search for.
 - `mode`: `"contains"`, `"startswith"`, `"match"`, or `"regex"`.
-- `callback`: A function `(message) => {}` that runs when a match is found. The `message` object includes `id`, `content`, `author`, and `channelId`.
-
-This utility allows your script to react to other users' messages if the script is active in that channel.
+- `callback`: A function `(message) => {}` that runs when a match is found.
 
 ```javascript
 // Auto-react with a fire emoji when someone mentions "aura"
